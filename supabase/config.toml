@@ -1,0 +1,28 @@
+# Supabase project settings used by `supabase functions deploy` and `supabase db push`.
+project_id = "icaosa-app"
+
+# Every function checks the caller itself (sign-in token, Paystack signature or
+# cron secret), so the gateway's JWT check is turned off.
+[functions.paystack-init]
+verify_jwt = false
+
+[functions.paystack-verify]
+verify_jwt = false
+
+[functions.paystack-callback]
+verify_jwt = false
+
+[functions.paystack-webhook]
+verify_jwt = false
+
+[functions.set-account]
+verify_jwt = false
+
+[functions.notify]
+verify_jwt = false
+
+[functions.daily-reminders]
+verify_jwt = false
+
+[functions.delete-account]
+verify_jwt = false

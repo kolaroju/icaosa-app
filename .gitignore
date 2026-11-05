@@ -41,3 +41,11 @@ example
 # generated native folders
 /ios
 /android
+
+# Firebase service account keys (never commit)
+*firebase-adminsdk*.json
+service-account*.json
+
+# Supabase local
+supabase/.temp/
+supabase/.branches/
