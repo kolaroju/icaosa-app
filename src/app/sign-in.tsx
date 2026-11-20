@@ -10,7 +10,7 @@ import { useTheme } from '@/lib/theme';
 
 const REVIEW_EMAIL = process.env.EXPO_PUBLIC_REVIEW_EMAIL?.trim().toLowerCase() || null;
 
-// Members sign in with a 6-digit code sent to their email. No passwords to forget.
+// Members sign in with a code (usually 6 digits) sent to their email. No passwords to forget.
 export default function SignIn() {
   const t = useTheme();
   const insets = useSafeAreaInsets();
@@ -43,7 +43,7 @@ export default function SignIn() {
   };
 
   const verify = async () => {
-    if (!/^\d{6}$/.test(code.trim())) return setError('Enter the 6-digit code from the email.');
+    if (!/^\d{6,10}$/.test(code.trim())) return setError('Enter the code from the email.');
     setBusy(true); setError(null);
     const { error: err } = await supabase.auth.verifyOtp({ email, token: code.trim(), type: 'email' });
     setBusy(false);
@@ -80,9 +80,9 @@ export default function SignIn() {
           </View>
         ) : (
           <View style={{ gap: 14 }}>
-            <Body>We sent a 6-digit code to <Body style={{ fontWeight: '600' }}>{email}</Body>. It can take a minute to arrive; check spam too.</Body>
+            <Body>We sent a sign-in code to <Body style={{ fontWeight: '600' }}>{email}</Body>. It can take a minute to arrive; check spam too.</Body>
             <Field label="Code" value={code} onChangeText={setCode} keyboardType="number-pad" textContentType="oneTimeCode" autoComplete="one-time-code"
-              maxLength={6} placeholder="123456" returnKeyType="done" onSubmitEditing={verify} style={{ fontSize: 22, letterSpacing: 6 }} />
+              maxLength={10} placeholder="123456" returnKeyType="done" onSubmitEditing={verify} style={{ fontSize: 22, letterSpacing: 6 }} />
             <ErrorText message={error} />
             <Button title="Sign in" onPress={verify} loading={busy} block />
             <View style={{ flexDirection: 'row', gap: 20 }}>

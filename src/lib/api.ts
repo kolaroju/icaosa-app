@@ -26,6 +26,7 @@ export function errorText(e: unknown): string {
   if (e instanceof Error) {
     if (/row-level security/i.test(e.message)) return "You don't have permission to do that.";
     if (/network|fetch/i.test(e.message)) return 'Could not reach ICAOSA. Check your internet connection.';
+    if (/504|timeout|timed out|Error sending/i.test(e.message)) return 'The sign-in email could not be sent just now. Wait a minute and try again.';
     return e.message;
   }
   if (e && typeof e === 'object' && 'message' in e) return String((e as { message: unknown }).message);
