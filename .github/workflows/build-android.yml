@@ -43,7 +43,19 @@ jobs:
         uses: expo/expo-github-action@v8
         with:
           eas-version: 27.5.0
+          eas-cache: false
           token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Check the Expo account
+        env:
+          NO_COLOR: '1'
+        run: |
+          if who="$(eas whoami 2>&1)"; then
+            echo "::notice title=Expo account::Signed in to Expo as $(echo "$who" | head -1)"
+          else
+            echo "::error title=Expo did not accept the EXPO_TOKEN::$(echo "$who" | tail -3 | tr '\n' ' ') Create a new token on expo.dev (Account settings, Access tokens) and paste it again as the EXPO_TOKEN secret."
+            exit 1
+          fi
 
       - name: Install the app's packages
         run: npm ci
@@ -63,8 +75,18 @@ jobs:
           # Upload the folder as it is now, including the settings applied above.
           EAS_NO_VCS: '1'
           PROFILE: ${{ inputs.kind == 'Play Store bundle (.aab)' && 'production' || 'preview' }}
+          NO_COLOR: '1'
         run: |
-          eas build --platform android --profile "$PROFILE" --non-interactive --wait --json > build.json
+          set +e
+          eas build --platform android --profile "$PROFILE" --non-interactive --wait --json > build.json 2> eas.log
+          code=$?
+          cat eas.log
+          if [ $code -ne 0 ]; then
+            # Show Expo's own error message at the top of the run page.
+            msg="$(sed -E 's/\x1b\[[0-9;]*m//g' eas.log | grep -v -E '^\s*$|is now available|To upgrade|npm install -g|Proceeding with outdated' | tail -12 | tr '\n' ' ' | sed 's/%/%25/g')"
+            echo "::error title=Expo build problem::$msg"
+          fi
+          exit $code
 
       - name: Show the download link
         if: always()
