@@ -37,8 +37,10 @@ if (!key || key.includes('REPLACE')) {
 }
 
 // Store reviewer sign-in (optional)
+// (Expo rejects empty values in eas.json, so leave the key out when unset.)
 const review = env('REVIEW_EMAIL') || buildEnv.EXPO_PUBLIC_REVIEW_EMAIL || '';
-buildEnv.EXPO_PUBLIC_REVIEW_EMAIL = review.includes('REPLACE') ? '' : review;
+if (review && !review.includes('REPLACE')) buildEnv.EXPO_PUBLIC_REVIEW_EMAIL = review;
+else delete buildEnv.EXPO_PUBLIC_REVIEW_EMAIL;
 
 // Firebase file for Android push notifications (optional for a first test build)
 const gs = env('GOOGLE_SERVICES_JSON_CONTENT');

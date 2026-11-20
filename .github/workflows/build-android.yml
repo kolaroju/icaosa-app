@@ -51,7 +51,7 @@ jobs:
           NO_COLOR: '1'
         run: |
           if who="$(eas whoami 2>&1)"; then
-            echo "::notice title=Expo account::Signed in to Expo as $(echo "$who" | head -1)"
+            echo "::notice title=Expo account::Signed in to Expo as $(echo "$who" | grep -v -E 'is now available|To upgrade|npm install -g|Proceeding with outdated|^\s*$' | head -1)"
           else
             echo "::error title=Expo did not accept the EXPO_TOKEN::$(echo "$who" | tail -3 | tr '\n' ' ') Create a new token on expo.dev (Account settings, Access tokens) and paste it again as the EXPO_TOKEN secret."
             exit 1

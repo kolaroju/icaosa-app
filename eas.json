@@ -7,8 +7,7 @@
     "base": {
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://dalxpgggjzoeynzktnvn.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_6TiZuO49TI-av0-7TPgKsQ_cPlnX5f3",
-        "EXPO_PUBLIC_REVIEW_EMAIL": "review@REPLACE-WITH-YOUR-DOMAIN"
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_6TiZuO49TI-av0-7TPgKsQ_cPlnX5f3"
       }
     },
     "preview": {
