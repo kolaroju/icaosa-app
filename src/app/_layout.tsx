@@ -16,6 +16,7 @@ import { registerForPush, useNotificationRouting } from '@/lib/push';
 import { SessionProvider, useSession } from '@/lib/session';
 import { isConfigured } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { useWebAppHead, useWebPaymentReturn } from '@/lib/web';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -61,6 +62,8 @@ function Navigator() {
 
   const refresh = useCallback(() => qc.invalidateQueries(), [qc]);
   useNotificationRouting(registered, refresh);
+  useWebAppHead();
+  useWebPaymentReturn(ready && registered);
 
   if (!isConfigured) return <SetupNeeded />;
   if (!ready) return <View style={{ flex: 1, backgroundColor: t.bg }} />;

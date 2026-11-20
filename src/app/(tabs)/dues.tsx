@@ -170,6 +170,22 @@ function AppealCard({ appeal, canClose }: { appeal: ReturnType<typeof useAppeals
   );
 }
 
+/** Admins only: the association's own account for association-wide appeals (stored as year 0). */
+function NationalAccount() {
+  const sets = useSets();
+  const nat = sets.data?.find((s) => s.year === 0);
+  return (
+    <View style={{ gap: 6 }}>
+      <Eyebrow>ICAOSA national account</Eyebrow>
+      <Small>{nat?.paystack_subaccount
+        ? `${nat.bank_name ?? 'Bank'} · ${nat.account_name ?? ''} · ${nat.account_number ?? ''}. Association-wide appeals are paid here.`
+        : 'Not connected. Association-wide appeals can’t take payments until it is.'}</Small>
+      <Button title={nat?.paystack_subaccount ? 'Change national account' : 'Connect national account'} icon="bank" variant="ghost" small
+        onPress={() => router.push({ pathname: '/set-account', params: { scope: 'association' } })} />
+    </View>
+  );
+}
+
 function TreasurerDesk() {
   const t = useTheme();
   const { profile, isAdmin } = useMe();
@@ -262,6 +278,7 @@ function TreasurerDesk() {
         </List>
       )}
       <Button title="Start a donation appeal" icon="gift" variant="ghost" small onPress={() => router.push('/new-appeal')} />
+      {isAdmin && <NationalAccount />}
     </View>
   );
 }

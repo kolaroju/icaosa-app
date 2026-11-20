@@ -107,3 +107,15 @@ for folder in (APP, STORE):
     for f in sorted(os.listdir(folder)):
         im = Image.open(os.path.join(folder, f))
         print(f'{f:40s} {im.size[0]}x{im.size[1]}')
+
+# --- Web app (iPhone home screen, Android browsers) ---
+PUBLIC = os.path.join(ROOT, 'public')
+os.makedirs(PUBLIC, exist_ok=True)
+save(centre(canvas(180, 'white'), crest_at(150)), f'{PUBLIC}/apple-touch-icon.png', opaque=True)
+save(centre(canvas(192, 'white'), crest_at(165)), f'{PUBLIC}/icon-192.png', opaque=True)
+save(centre(canvas(512, 'white'), crest_at(440)), f'{PUBLIC}/icon-512.png', opaque=True)
+save(centre(canvas(512, 'white'), crest_at(fit_in_circle(330) * 512 // 1024 + 20)), f'{PUBLIC}/icon-maskable-512.png', opaque=True)
+save(crest_at(240), f'{PUBLIC}/crest-small.png')
+for f in ['apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'crest-small.png']:
+    im = Image.open(os.path.join(PUBLIC, f))
+    print(f'{f:40s} {im.size[0]}x{im.size[1]}')

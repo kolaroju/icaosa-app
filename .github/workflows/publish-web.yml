@@ -1,0 +1,106 @@
+# Publishes the web version of ICAOSA (for iPhone users) on Expo's hosting.
+# Run it from GitHub: Actions → "Publish web app" → Run workflow.
+# The address is https://icaosa.expo.app (or the name you choose the first time).
+name: Publish web app
+
+on:
+  workflow_dispatch:
+    inputs:
+      web_name:
+        description: Web address name, used only the first time (icaosa → https://icaosa.expo.app)
+        type: string
+        default: icaosa
+
+concurrency:
+  group: web-deploy
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check the Expo token is set
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error title=Setting missing::Add your Expo access token as a repository secret named EXPO_TOKEN."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Set up Expo
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: 27.5.0
+          eas-cache: false
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install the app's packages
+        run: npm ci
+
+      - name: Apply ICAOSA settings
+        env:
+          EXPO_PROJECT_ID: ${{ vars.EXPO_PROJECT_ID }}
+          EXPO_OWNER: ${{ vars.EXPO_OWNER }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+          REVIEW_EMAIL: ${{ vars.REVIEW_EMAIL }}
+        run: node scripts/ci/apply-build-settings.mjs
+
+      - name: Build the web version
+        run: |
+          # The web build reads the same settings the phone app uses (eas.json).
+          eval "$(node -e "const e=require('./eas.json').build.base.env; for (const [k,v] of Object.entries(e)) console.log('export '+k+'='+JSON.stringify(v))")"
+          npx expo export --platform web
+
+      - name: Fill in the contact email on the privacy pages
+        env:
+          CONTACT_EMAIL: ${{ vars.CONTACT_EMAIL }}
+        run: |
+          contact="$(node -p "require('./app.json').expo.extra?.contactEmail || ''")"
+          contact="${CONTACT_EMAIL:-$contact}"
+          if [ -n "$contact" ]; then
+            link="<a href=\"mailto:$contact\">$contact</a>"
+          else
+            link="the ICAOSA admin through the app"
+            echo "::warning title=No contact email::The privacy pages say 'the ICAOSA admin through the app'. Add a repository variable CONTACT_EMAIL to show an email address."
+          fi
+          for f in dist/privacy.html dist/account-deletion.html; do
+            node -e "const fs=require('fs');const f=process.argv[1];fs.writeFileSync(f,fs.readFileSync(f,'utf8').replaceAll('CONTACT_EMAIL',process.argv[2]))" "$f" "$link"
+          done
+
+      - name: Publish on Expo
+        env:
+          NO_COLOR: '1'
+          WEB_NAME: ${{ inputs.web_name }}
+        run: |
+          set +e
+          eas deploy --prod --non-interactive --dev-domain "$WEB_NAME" --json > deploy.json 2> deploy.log
+          code=$?
+          cat deploy.log
+          if [ $code -ne 0 ]; then
+            msg="$(sed -E 's/\x1b\[[0-9;]*m//g' deploy.log | grep -v -E '^\s*$|is now available|To upgrade|npm install -g|Proceeding with outdated|in preview' | tail -10 | tr '\n' ' ' | sed 's/%/%25/g')"
+            echo "::error title=Publishing problem::$msg"
+            exit $code
+          fi
+          url="$(node -e "const d=JSON.parse(require('fs').readFileSync('deploy.json','utf8'));console.log((d.production&&d.production.url)||d.url||'')")"
+          {
+            echo "## ICAOSA web app is live"
+            echo
+            echo "**Address:** $url"
+            echo
+            echo "On an iPhone, open it in **Safari**, tap **Share**, then **Add to Home Screen**."
+            echo
+            echo "Privacy policy (for the Play Store): $url/privacy.html"
+            echo
+            echo "Account deletion page (for the Play Store): $url/account-deletion.html"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice title=Web app address::$url"

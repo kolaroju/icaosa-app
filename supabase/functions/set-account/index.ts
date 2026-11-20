@@ -7,7 +7,7 @@ import { paystack } from '../_shared/paystack.ts';
 type Body =
   | { action: 'banks' }
   | { action: 'resolve'; bankCode: string; accountNumber: string }
-  | { action: 'save'; setYear?: number; duesAmount: number; bankCode?: string; bankName?: string; accountNumber?: string };
+  | { action: 'save'; scope?: 'set' | 'association'; setYear?: number; duesAmount: number; bankCode?: string; bankName?: string; accountNumber?: string };
 
 type Bank = { name: string; code: string; active: boolean; is_deleted?: boolean | null; type?: string };
 
@@ -65,9 +65,12 @@ serve(async (req) => {
   }
 
   if (body.action === 'save') {
-    const setYear = me.role === 'admin' && body.setYear ? Number(body.setYear) : me.set_year;
-    if (!isExcoOf(me, setYear)) throw new HttpError(403, `Only excos of the ${setYear} Set can change its account.`);
-    const dues = Math.round(Number(body.duesAmount) || 0);
+    const national = body.scope === 'association';
+    if (national && me.role !== 'admin') throw new HttpError(403, "Only association admins can change ICAOSA's national account.");
+    // Year 0 holds the association's national account.
+    const setYear = national ? 0 : me.role === 'admin' && body.setYear ? Number(body.setYear) : me.set_year;
+    if (!national && !isExcoOf(me, setYear)) throw new HttpError(403, `Only excos of the ${setYear} Set can change its account.`);
+    const dues = national ? 0 : Math.round(Number(body.duesAmount) || 0);
     if (dues < 0 || dues > 10_000_000) throw new HttpError(400, 'Enter monthly dues between ₦0 and ₦10,000,000.');
 
     const { data: current } = await admin().from('sets').select('*').eq('year', setYear).maybeSingle();
@@ -78,14 +81,14 @@ serve(async (req) => {
     if (bankChanged) {
       const accountName = await resolveAccount(body.bankCode!, body.accountNumber!);
       const sub = {
-        business_name: `ICAOSA ${setYear} Set`,
+        business_name: national ? 'ICAOSA National' : `ICAOSA ${setYear} Set`,
         settlement_bank: body.bankCode,
         bank_code: body.bankCode,
         account_number: body.accountNumber,
         // Commission is charged per payment in paystack-init (settings.association_percent /
         // commission_flat), so the subaccount's default split stays at 0.
         percentage_charge: 0,
-        description: `Ibadan City Academy Old Students Association, ${setYear} Set`,
+        description: national ? 'Ibadan City Academy Old Students Association (national)' : `Ibadan City Academy Old Students Association, ${setYear} Set`,
       };
       const saved = current?.paystack_subaccount
         ? await paystack<{ subaccount_code: string }>(`/subaccount/${current.paystack_subaccount}`, { method: 'PUT', body: JSON.stringify(sub) })

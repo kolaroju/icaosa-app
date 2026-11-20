@@ -8,20 +8,23 @@ import { Platform } from 'react-native';
 import { supabase } from './supabase';
 
 // Show notifications as banners even while the app is open.
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+// (Phone notifications are not available in the web version.)
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+}
 
 let currentToken: string | null = null;
 
 /** Asks permission once and saves this phone's push token for the signed-in member. */
 export async function registerForPush(): Promise<'granted' | 'denied' | 'unavailable'> {
-  if (!Device.isDevice) return 'unavailable';
+  if (Platform.OS === 'web' || !Device.isDevice) return 'unavailable';
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
       name: 'ICAOSA updates',
@@ -50,6 +53,7 @@ export async function registerForPush(): Promise<'granted' | 'denied' | 'unavail
 
 /** Stops pushes to this phone (used on sign-out). */
 export async function unregisterPush() {
+  if (Platform.OS === 'web') return;
   try {
     if (!currentToken && Device.isDevice && (await Notifications.getPermissionsAsync()).status === 'granted') {
       const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
@@ -65,7 +69,7 @@ export async function unregisterPush() {
 /** Opens the right screen when a member taps a notification. */
 export function useNotificationRouting(enabled: boolean, onReceive?: () => void) {
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || Platform.OS === 'web') return;
     const go = (data: Record<string, unknown> | undefined) => {
       const screen = typeof data?.screen === 'string' ? data.screen : null;
       if (screen && ['/', '/feed', '/events', '/dues', '/members', '/notifications'].includes(screen)) {

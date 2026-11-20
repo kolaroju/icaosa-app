@@ -3,8 +3,9 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Body, Button, CrestStripe, ErrorText, Eyebrow, Field, H1, LinkButton, Small } from '@/components/ui';
+import { Body, Button, CrestStripe, ErrorText, Eyebrow, Field, H1, LinkButton, Notice, Small } from '@/components/ui';
 import { errorText } from '@/lib/api';
+import { shouldSuggestInstall } from '@/lib/web';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 
@@ -62,6 +63,10 @@ export default function SignIn() {
           <H1>Welcome home, old student.</H1>
           <Body muted>Your set’s news, invites, events, dues and birthdays, all in one place.</Body>
         </View>
+
+        {shouldSuggestInstall() && (
+          <Notice tone="green">On iPhone: tap the Share button at the bottom of Safari, then “Add to Home Screen”, to keep ICAOSA on your home screen like an app.</Notice>
+        )}
 
         {step === 'email' ? (
           <View style={{ gap: 14 }}>

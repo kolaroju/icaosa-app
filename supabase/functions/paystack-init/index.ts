@@ -3,9 +3,31 @@
 import { admin, getProfile, HttpError, json, readJson, requireUser, serve, env, setLabel } from '../_shared/core.ts';
 import { paystack } from '../_shared/paystack.ts';
 
-type Body =
+type Body = (
   | { kind: 'dues'; months: string[] }
-  | { kind: 'donation'; appealId?: string | null; amount: number };
+  | { kind: 'donation'; appealId?: string | null; amount: number }
+) & { returnUrl?: string };
+
+/**
+ * Where Paystack sends a member back to after paying in the web version.
+ * Only the ICAOSA web app's own addresses are allowed (plus WEB_APP_ORIGINS,
+ * comma separated, for a custom domain), and localhost for testing.
+ */
+function webReturnUrl(raw?: string): string | null {
+  if (!raw) return null;
+  let u: URL;
+  try {
+    u = new URL(raw);
+  } catch {
+    throw new HttpError(400, 'Invalid return address.');
+  }
+  const extra = (Deno.env.get('WEB_APP_ORIGINS') ?? '').split(',').map((o) => o.trim()).filter(Boolean);
+  const ok = (u.protocol === 'https:' && /^icaosa(--[a-z0-9-]+)?\.expo\.app$/.test(u.hostname)) ||
+    extra.includes(u.origin) ||
+    (u.protocol === 'http:' && (u.hostname === 'localhost' || u.hostname === '127.0.0.1'));
+  if (!ok) throw new HttpError(400, 'That return address is not allowed.');
+  return u.origin + '/?paystack=1';
+}
 
 serve(async (req) => {
   if (req.method !== 'POST') throw new HttpError(405, 'Use POST');
@@ -13,6 +35,7 @@ serve(async (req) => {
   if (!user.email) throw new HttpError(400, 'Your account needs an email address for Paystack receipts.');
   const me = await getProfile(user.id);
   const body = await readJson<Body>(req);
+  const webReturn = webReturnUrl(body.returnUrl);
 
   let setYear: number | null = me.set_year;
   let amount = 0;
@@ -54,15 +77,16 @@ serve(async (req) => {
     throw new HttpError(400, 'Unknown payment type.');
   }
 
-  // Set money is split straight to the set's own Paystack subaccount.
-  // Association-wide appeals go to the main ICAOSA account.
-  let subaccount: string | null = null;
-  if (setYear !== null) {
-    const { data: set } = await admin().from('sets').select('paystack_subaccount').eq('year', setYear).maybeSingle();
-    subaccount = set?.paystack_subaccount ?? null;
-    if (!subaccount) {
-      throw new HttpError(400, `The ${setLabel(setYear)} has not connected its bank account yet. Ask your set treasurer to set it up in Dues.`);
-    }
+  // Money is split straight to the receiving account's Paystack subaccount:
+  // the set's own account, or for association-wide appeals the ICAOSA
+  // national account (stored as year 0). Nothing settles to the operator
+  // except the commission below.
+  const { data: acct } = await admin().from('sets').select('paystack_subaccount').eq('year', setYear ?? 0).maybeSingle();
+  const subaccount: string | null = acct?.paystack_subaccount ?? null;
+  if (!subaccount) {
+    throw new HttpError(400, setYear === null
+      ? "ICAOSA's national account isn't connected yet, so association-wide donations can't be taken. An association admin can connect it in Dues → Treasurer's desk → National account."
+      : `The ${setLabel(setYear)} has not connected its bank account yet. Ask your set treasurer to set it up in Dues.`);
   }
   const { data: settings } = await admin().from('settings')
     .select('fees_bearer, association_percent, commission_flat').maybeSingle();
@@ -93,7 +117,8 @@ serve(async (req) => {
       amount: amount * 100, // kobo
       currency: 'NGN',
       reference,
-      callback_url: `${env('SUPABASE_URL')}/functions/v1/paystack-callback`,
+      // Phones come back through paystack-callback (icaosa:// link); the web app to its own page.
+      callback_url: webReturn ?? `${env('SUPABASE_URL')}/functions/v1/paystack-callback`,
       ...(subaccount ? { subaccount, bearer: settings?.fees_bearer ?? 'subaccount' } : {}),
       // transaction_charge (in kobo) goes to the main account and overrides the subaccount's default split.
       ...(subaccount && commission > 0 ? { transaction_charge: commission * 100 } : {}),
@@ -102,7 +127,9 @@ serve(async (req) => {
         user_id: user.id,
         kind: body.kind,
         set_year: setYear,
-        cancel_action: `${env('SUPABASE_URL')}/functions/v1/paystack-callback?reference=${reference}&cancelled=1`,
+        cancel_action: webReturn
+          ? `${webReturn}&cancelled=1&reference=${reference}`
+          : `${env('SUPABASE_URL')}/functions/v1/paystack-callback?reference=${reference}&cancelled=1`,
         custom_fields: [
           { display_name: 'Member', variable_name: 'member', value: me.full_name },
           { display_name: 'Set', variable_name: 'set', value: setLabel(me.set_year) },

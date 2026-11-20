@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Linking, Switch, View } from 'react-native';
+import { Linking, Platform, Switch, View } from 'react-native';
 
 import { ProfileForm } from '@/components/profile-form';
 import { Body, Button, ErrorText, FormScreen, H2, List, ListItem, Notice, Small } from '@/components/ui';
@@ -76,8 +76,14 @@ export default function ProfileScreen() {
           </ListItem>
         ))}
       </List>
-      <Small>If notifications don’t arrive, allow them for ICAOSA in your phone’s Settings.</Small>
-      <Button title="Open phone settings" variant="ghost" small onPress={() => Linking.openSettings()} />
+      {Platform.OS === 'web' ? (
+        <Small>Phone notifications come with the Android app. In the web version, check the bell at the top for birthdays, events and dues.</Small>
+      ) : (
+        <>
+          <Small>If notifications don’t arrive, allow them for ICAOSA in your phone’s Settings.</Small>
+          <Button title="Open phone settings" variant="ghost" small onPress={() => Linking.openSettings()} />
+        </>
+      )}
 
       <ErrorText message={error} />
       <H2 style={{ marginTop: 10 }}>Account</H2>

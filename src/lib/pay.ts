@@ -19,6 +19,15 @@ export type PayResult = { status: 'confirmed' | 'pending' | 'failed' | 'opened-i
  * the app, so on iPhone donations open in Safari instead of inside the app.
  */
 export async function payWithPaystack(req: PayRequest): Promise<PayResult> {
+  if (Platform.OS === 'web') {
+    // In the browser, go to Paystack in the same tab. Paystack sends the member
+    // back to the web app's front page, which opens the payment result.
+    const returnUrl = `${window.location.origin}/?paystack=1`;
+    const { authorizationUrl } = await callFunction<{ authorizationUrl: string }>('paystack-init', { ...req, returnUrl });
+    window.location.assign(authorizationUrl);
+    return new Promise<PayResult>(() => {}); // the page is leaving
+  }
+
   const { authorizationUrl, reference } = await callFunction<{ authorizationUrl: string; reference: string }>('paystack-init', req);
 
   if (Platform.OS === 'ios' && req.kind === 'donation') {

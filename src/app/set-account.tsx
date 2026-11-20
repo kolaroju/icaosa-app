@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 
 import { Body, Button, Card, ErrorText, Field, FormScreen, Loading, Notice, Picker, Small } from '@/components/ui';
@@ -10,20 +10,27 @@ import type { SetConfig } from '@/lib/types';
 
 type Bank = { name: string; code: string };
 
+// Year 0 is the association's own (national) account, used for association-wide appeals.
 export default function SetAccount() {
-  const { profile, isExco } = useMe();
+  const { profile, isExco, isAdmin } = useMe();
+  const { scope } = useLocalSearchParams<{ scope?: string }>();
+  const national = scope === 'association';
   const sets = useSets();
-  const y = profile.set_year;
+  const y = national ? 0 : profile.set_year;
 
-  if (!isExco) {
-    return <FormScreen title="Set account" onClose={() => router.back()}><Notice>Only excos of your set can change its account.</Notice></FormScreen>;
+  if (national ? !isAdmin : !isExco) {
+    return (
+      <FormScreen title="Account" onClose={() => router.back()}>
+        <Notice>{national ? 'Only association admins can change ICAOSA’s national account.' : 'Only excos of your set can change its account.'}</Notice>
+      </FormScreen>
+    );
   }
   if (sets.isLoading) return <Loading />;
   const cfg = sets.data?.find((s) => s.year === y) ?? null;
-  return <AccountForm key={cfg?.account_number ?? 'new'} year={y} cfg={cfg} />;
+  return <AccountForm key={cfg?.account_number ?? 'new'} year={y} cfg={cfg} national={national} />;
 }
 
-function AccountForm({ year, cfg }: { year: number; cfg: SetConfig | null }) {
+function AccountForm({ year, cfg, national }: { year: number; cfg: SetConfig | null; national: boolean }) {
   const qc = useQueryClient();
   const banks = useQuery({
     queryKey: ['banks'],
@@ -64,7 +71,7 @@ function AccountForm({ year, cfg }: { year: number; cfg: SetConfig | null }) {
     if (!resolved) return setError('Wait for the account name to appear before saving.');
     setSaving(true);
     try {
-      await callFunction('set-account', { action: 'save', duesAmount: amount, bankCode: bank, bankName: banks.data?.find((b) => b.code === bank)?.name ?? cfg?.bank_name, accountNumber: acct });
+      await callFunction('set-account', { action: 'save', scope: national ? 'association' : 'set', duesAmount: amount, bankCode: bank, bankName: banks.data?.find((b) => b.code === bank)?.name ?? cfg?.bank_name, accountNumber: acct });
       await qc.invalidateQueries({ queryKey: keys.sets });
       router.back();
     } catch (e) {
@@ -75,9 +82,11 @@ function AccountForm({ year, cfg }: { year: number; cfg: SetConfig | null }) {
   };
 
   return (
-    <FormScreen title={`${setLabel(year)} account & dues`} onClose={() => router.back()}>
-      <Body muted>Members’ dues and donations are paid through Paystack and settle directly into this account, usually the next working day.</Body>
-      <Field label="Monthly dues (₦)" value={dues} onChangeText={setDues} keyboardType="number-pad" placeholder="e.g. 2000" />
+    <FormScreen title={national ? 'ICAOSA national account' : `${setLabel(year)} account & dues`} onClose={() => router.back()}>
+      <Body muted>{national
+        ? 'Donations to association-wide appeals are paid through Paystack and settle directly into this account, usually the next working day.'
+        : 'Members’ dues and donations are paid through Paystack and settle directly into this account, usually the next working day.'}</Body>
+      {!national && <Field label="Monthly dues (₦)" value={dues} onChangeText={setDues} keyboardType="number-pad" placeholder="e.g. 2000" />}
       <Picker label="Bank" value={bank} onChange={(b) => { setBank(b); void lookup(b, acct); }} placeholder={banks.isLoading ? 'Loading banks…' : 'Choose the bank'}
         options={(banks.data ?? []).map((b) => ({ value: b.code, label: b.name }))} />
       {banks.isError && <ErrorText message={errorText(banks.error)} />}
@@ -93,7 +102,9 @@ function AccountForm({ year, cfg }: { year: number; cfg: SetConfig | null }) {
       )}
       <ErrorText message={error} />
       <Button title="Save" onPress={save} loading={saving} block />
-      <Small>Every member of the {setLabel(year)} sees the bank, account name and number on their Dues page.</Small>
+      <Small>{national
+        ? 'Members see this account name when they give to an association-wide appeal.'
+        : `Every member of the ${setLabel(year)} sees the bank, account name and number on their Dues page.`}</Small>
     </FormScreen>
   );
 }
