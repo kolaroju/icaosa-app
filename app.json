@@ -58,7 +58,10 @@
       "reactCompiler": true
     },
     "extra": {
-      "eas": {}
-    }
+      "eas": {
+        "projectId": "e2b9d96b-86a1-4620-bc14-5c458a4bab10"
+      }
+    },
+    "owner": "gamich-consults"
   }
 }
