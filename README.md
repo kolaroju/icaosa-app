@@ -22,7 +22,7 @@ The mobile app of the **Ibadan City Academy Old Students Association**. Old stud
 | Push | Expo push service → FCM / APNs | `supabase/functions/_shared/push.ts` |
 | Daily reminders | pg_cron → `daily-reminders` function | `supabase/schedule-reminders.sql` |
 | Builds from GitHub | GitHub Actions: "Build Android app" (EAS Build), "Deploy server functions" (Supabase CLI) | `.github/workflows/`, `scripts/ci/` |
-| Icons and store art | Vector crest → every size | `tools/crest/`, `assets/images/`, `assets/store/` |
+| Icons and store art | Made from the ICAOSA logo (`assets/brand/`) | `tools/make_icons.py`, `assets/images/`, `assets/store/` |
 
 ### App screens (`src/app/`)
 
