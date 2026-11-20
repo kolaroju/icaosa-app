@@ -19,6 +19,8 @@ jobs:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_URL: ${{ vars.SUPABASE_URL }}
     steps:
+      - uses: actions/checkout@v5
+
       - name: Check settings
         id: check
         env:
@@ -28,6 +30,7 @@ jobs:
           fail=0
           need() { echo "::error title=Setting missing::$1"; fail=1; }
           [ -n "$SUPABASE_ACCESS_TOKEN" ] || need "Add a Supabase access token as the repository secret SUPABASE_ACCESS_TOKEN (supabase.com → your account → Access Tokens)."
+          [ -n "$SUPABASE_URL" ] || SUPABASE_URL="$(node -p "require('./eas.json').build.base.env.EXPO_PUBLIC_SUPABASE_URL || ''")"
           ref="$(echo "$SUPABASE_URL" | sed -nE 's#^https://([a-z0-9]+)\.supabase\.co/?$#\1#p')"
           [ -n "$ref" ] || need "Add the repository variable SUPABASE_URL (https://xxxx.supabase.co, from Supabase → Project Settings → API Keys)."
           [ -n "$PAYSTACK_SECRET_KEY" ] || need "Add your Paystack secret key (sk_test_... or sk_live_...) as the repository secret PAYSTACK_SECRET_KEY."
@@ -36,8 +39,6 @@ jobs:
           echo "ref=$ref" >> "$GITHUB_OUTPUT"
           case "$PAYSTACK_SECRET_KEY" in sk_live_*) echo "mode=LIVE" >> "$GITHUB_OUTPUT";; *) echo "mode=TEST" >> "$GITHUB_OUTPUT";; esac
           exit $fail
-
-      - uses: actions/checkout@v5
 
       - uses: supabase/setup-cli@v1
         with:
