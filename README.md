@@ -8,7 +8,8 @@ The mobile app of the **Ibadan City Academy Old Students Association**. Old stud
 - **Notifications:** push notifications for birthdays, new posts and events, the day before events, monthly dues reminders and payment receipts
 - **Members:** directory by set, birthdays this month, WhatsApp links; admins appoint set excos
 
-**To launch the app, follow [docs/LAUNCH-GUIDE.md](docs/LAUNCH-GUIDE.md).**
+**To get the Android APK, follow [docs/BUILD-APK.md](docs/BUILD-APK.md)** (everything runs from GitHub in the browser).
+**For the full store launch, follow [docs/LAUNCH-GUIDE.md](docs/LAUNCH-GUIDE.md).**
 
 ## How it is built
 
@@ -20,6 +21,8 @@ The mobile app of the **Ibadan City Academy Old Students Association**. Old stud
 | Payments | Paystack (hosted checkout, subaccounts, webhooks) | `supabase/functions/paystack-*` |
 | Push | Expo push service → FCM / APNs | `supabase/functions/_shared/push.ts` |
 | Daily reminders | pg_cron → `daily-reminders` function | `supabase/schedule-reminders.sql` |
+| Builds from GitHub | GitHub Actions: "Build Android app" (EAS Build), "Deploy server functions" (Supabase CLI) | `.github/workflows/`, `scripts/ci/` |
+| Icons and store art | Vector crest → every size | `tools/crest/`, `assets/images/`, `assets/store/` |
 
 ### App screens (`src/app/`)
 

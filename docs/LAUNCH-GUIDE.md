@@ -2,6 +2,8 @@
 
 This guide takes the ICAOSA app from this GitHub repository to the Google Play Store and the Apple App Store. It is written for someone who is comfortable with computers but has not published an app before. Follow the steps in order; each one says what you need before you start and how to know it worked.
 
+> **Just want the Android APK?** Follow [BUILD-APK.md](BUILD-APK.md). It builds everything from GitHub in your browser, with nothing to install. This longer guide covers the full launch, including the App Store.
+
 Allow about two to four weeks end to end. Most of that time is waiting: Paystack business activation, Apple and Google account checks, and (for a personal Google account) a 14-day test period.
 
 ---
@@ -241,7 +243,7 @@ Only after Paystack has activated the business:
    - **App access**: "All or some functionality is restricted", and give the reviewer account: the email from Step 2, its password, and the note "Enter the email, tap *Send me a sign-in code*, and a password box appears."
    - **Data safety**: the app collects name, email address, phone number, and purchase history (payments), to run the app and manage accounts. Data is encrypted in transit. Users can request deletion: **in the app, Profile → Delete my account**. Card details are handled by Paystack.
    - **Content rating** questionnaire, **Target audience** (18 and over), **Ads**: no ads.
-6. **Store listing**: short description, full description, the app icon (`assets/images/icon.png`), and at least two phone screenshots (take them on a test phone).
+6. **Store listing**: short description, full description, the app icon (`assets/store/play-store-icon-512.png`, 512 × 512), the feature graphic (`assets/store/play-feature-graphic-1024x500.png`), and at least two phone screenshots (take them on a test phone).
 7. If your account is **personal**: run a **Closed testing** track with at least 12 testers (classmates are ideal) for 14 days, then apply for production access. **Organisation** accounts can go to **Production** once the test release works.
 8. Later releases can be sent straight from your terminal with `npx eas-cli@latest submit --platform android` (Expo's docs explain the one-time Google service account setup).
 
@@ -263,7 +265,7 @@ Only after Paystack has activated the business:
    ```
 
    This creates the app in **App Store Connect** and uploads the build.
-3. In **App Store Connect → ICAOSA**, fill in the listing (screenshots from an iPhone, description, privacy policy link, support link) and the **App Privacy** questions (same answers as Google's Data safety above).
+3. In **App Store Connect → ICAOSA**, fill in the listing (screenshots from an iPhone, description, privacy policy link, support link; the 1024 × 1024 icon is `assets/store/app-store-icon-1024.png`) and the **App Privacy** questions (same answers as Google's Data safety above).
 4. In **App Review Information**, give the reviewer account and paste this note:
 
    > ICAOSA is the app of the Ibadan City Academy Old Students Association. Monthly dues are membership fees for a real-world association, paid through Paystack under guideline 3.1.3(e). Donations to association appeals open in Safari and are collected outside the app, per guideline 3.2.2(iv). Accounts can be deleted in the app: Profile → Delete my account. To sign in, enter the review email, tap "Send me a sign-in code", and a password box appears.
