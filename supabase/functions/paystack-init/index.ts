@@ -64,12 +64,22 @@ serve(async (req) => {
       throw new HttpError(400, `The ${setLabel(setYear)} has not connected its bank account yet. Ask your set treasurer to set it up in Dues.`);
     }
   }
-  const { data: settings } = await admin().from('settings').select('fees_bearer').maybeSingle();
+  const { data: settings } = await admin().from('settings')
+    .select('fees_bearer, association_percent, commission_flat').maybeSingle();
+
+  // Platform commission: goes to the main Paystack account, the set gets the rest.
+  // Never more than half the payment, so the set's share always covers Paystack's fee.
+  let commission = 0;
+  if (subaccount) {
+    const pct = Number(settings?.association_percent ?? 0);
+    const flat = Number(settings?.commission_flat ?? 0);
+    commission = Math.min(Math.round((amount * pct) / 100) + flat, Math.floor(amount / 2));
+  }
 
   const reference = `ICA-${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 8)}`.toUpperCase();
   const { data: row, error } = await admin().from('payments').insert({
     user_id: user.id, set_year: setYear, kind: body.kind, months, appeal_id: appealId,
-    amount, method: 'paystack', status: 'initialized', reference,
+    amount, method: 'paystack', status: 'initialized', reference, commission,
   }).select('id').single();
   if (error) {
     if (error.message?.includes('already paid')) throw new HttpError(409, 'Some of those months are already paid or waiting for confirmation.');
@@ -85,6 +95,8 @@ serve(async (req) => {
       reference,
       callback_url: `${env('SUPABASE_URL')}/functions/v1/paystack-callback`,
       ...(subaccount ? { subaccount, bearer: settings?.fees_bearer ?? 'subaccount' } : {}),
+      // transaction_charge (in kobo) goes to the main account and overrides the subaccount's default split.
+      ...(subaccount && commission > 0 ? { transaction_charge: commission * 100 } : {}),
       metadata: {
         payment_id: row.id,
         user_id: user.id,

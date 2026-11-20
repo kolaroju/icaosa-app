@@ -49,9 +49,12 @@ jobs:
           PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           EXPO_ACCESS_TOKEN: ${{ secrets.EXPO_PUSH_ACCESS_TOKEN }}
+          OTHER_PAYSTACK_WEBHOOKS: ${{ secrets.OTHER_PAYSTACK_WEBHOOKS }}
         run: |
           args=("PAYSTACK_SECRET_KEY=$PAYSTACK_SECRET_KEY" "CRON_SECRET=$CRON_SECRET")
           [ -n "$EXPO_ACCESS_TOKEN" ] && args+=("EXPO_ACCESS_TOKEN=$EXPO_ACCESS_TOKEN")
+          # Webhook addresses of other apps on the same Paystack business (comma separated, optional)
+          args+=("OTHER_PAYSTACK_WEBHOOKS=${OTHER_PAYSTACK_WEBHOOKS:-none}")
           supabase secrets set --remote="${{ steps.check.outputs.ref }}" --yes "${args[@]}"
 
       - name: Deploy the functions

@@ -77,13 +77,14 @@ serve(async (req) => {
       (body.accountNumber !== current?.account_number || body.bankCode !== current?.bank_code || !current?.paystack_subaccount);
     if (bankChanged) {
       const accountName = await resolveAccount(body.bankCode!, body.accountNumber!);
-      const { data: settings } = await admin().from('settings').select('association_percent').maybeSingle();
       const sub = {
         business_name: `ICAOSA ${setYear} Set`,
         settlement_bank: body.bankCode,
         bank_code: body.bankCode,
         account_number: body.accountNumber,
-        percentage_charge: Number(settings?.association_percent ?? 0),
+        // Commission is charged per payment in paystack-init (settings.association_percent /
+        // commission_flat), so the subaccount's default split stays at 0.
+        percentage_charge: 0,
         description: `Ibadan City Academy Old Students Association, ${setYear} Set`,
       };
       const saved = current?.paystack_subaccount
